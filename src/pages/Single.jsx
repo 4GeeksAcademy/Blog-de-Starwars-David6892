@@ -1,37 +1,98 @@
-// Import necessary hooks and components from react-router-dom and other libraries.
-import { Link, useParams } from "react-router-dom";  // To use link for navigation and useParams to get URL parameters
-import PropTypes from "prop-types";  // To define prop types for this component
-import rigoImageUrl from "../assets/img/rigo-baby.jpg"  // Import an image asset
-import useGlobalReducer from "../hooks/useGlobalReducer";  // Import a custom hook for accessing the global state
 
-// Define and export the Single component which displays individual item details.
-export const Single = props => {
-  // Access the global state using the custom hook.
-  const { store } = useGlobalReducer()
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
-  // Retrieve the 'theId' URL parameter using useParams hook.
-  const { theId } = useParams()
-  const singleTodo = store.todos.find(todo => todo.id === parseInt(theId));
+export const Single = () => {
 
-  return (
-    <div className="container text-center">
-      {/* Display the title of the todo element dynamically retrieved from the store using theId. */}
-      <h1 className="display-4">Todo: {singleTodo?.title}</h1>
-      <hr className="my-4" />  {/* A horizontal rule for visual separation. */}
+    const { theId } = useParams();
 
-      {/* A Link component acts as an anchor tag but is used for client-side routing to prevent page reloads. */}
-      <Link to="/">
-        <span className="btn btn-primary btn-lg" href="#" role="button">
-          Back home
-        </span>
-      </Link>
-    </div>
-  );
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getItem();
+    }, []);
+
+    const getItem = async () => {
+
+        try {
+            setLoading(true);
+
+            // Como no tienes "type" en la ruta,
+            // probamos en people (lo más común en este ejercicio 4Geeks)
+            let response = await fetch(`https://www.swapi.tech/api/people/${theId}`);
+            let result = await response.json();
+
+            if (!response.ok) throw new Error("Not found");
+
+            setData(result.result);
+
+        } catch (error) {
+            console.log("No es persona, intentando planeta...");
+
+            try {
+                let response = await fetch(`https://www.swapi.tech/api/planets/${theId}`);
+                let result = await response.json();
+
+                setData(result.result);
+
+            } catch (error2) {
+                console.log("No es planeta, intentando vehículo...");
+
+                try {
+                    let response = await fetch(`https://www.swapi.tech/api/vehicles/${theId}`);
+                    let result = await response.json();
+
+                    setData(result.result);
+
+                } catch (error3) {
+                    console.log("No encontrado");
+                }
+            }
+        }
+
+        setLoading(false);
+    };
+
+    if (loading) {
+        return (
+            <div className="container mt-5">
+                <h3>Cargando...</h3>
+            </div>
+        );
+    }
+
+    if (!data) {
+        return (
+            <div className="container mt-5">
+                <h3>No se encontró el elemento</h3>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container mt-5">
+
+            <div className="card p-4">
+
+                <h2>{data.properties?.name}</h2>
+
+                <hr />
+
+                <ul>
+                    {
+                        Object.entries(data.properties).map(([key, value]) => (
+                            <li key={key}>
+                                <strong>{key}:</strong> {value}
+                            </li>
+                        ))
+                    }
+                </ul>
+
+            </div>
+
+        </div>
+    );
 };
 
-// Use PropTypes to validate the props passed to this component, ensuring reliable behavior.
-Single.propTypes = {
-  // Although 'match' prop is defined here, it is not used in the component.
-  // Consider removing or using it as needed.
-  match: PropTypes.object
-};
+export default Single;
